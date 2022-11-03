@@ -1,0 +1,87 @@
+#! /bin/bash
+
+if [[ "$1" == "" || "$1" == "-h" ]]; then
+  echo;
+  echo 'Clones from a remote repo and changes working directory into it, based on options provided';
+  echo;
+  echo;
+  echo 'SYNTAX:';
+  echo;
+  echo '  ggc <repoId> [path/to/folder[/]]';
+  echo;
+  echo '  * <repoId> may be full https url, full ssh url, or pathless repo name (see below)';
+  echo;
+  echo;
+  echo 'USAGE:';
+  echo;
+  echo '  ggc <repoURI> [path/to/folder[/]]';
+  echo;
+  echo '  ** functions identically to git clone'
+  echo;
+  echo;
+  echo '  ggc someRepo [path/to/folder[/]]';
+  echo;
+  echo '  ** if either (or both) of GITLAB_PROJECT_PATH or GITHUB_USERNAME are set:';
+  echo;
+  echo '    - will attempt to find someRepo on GitLab first, then GitHub';
+  echo '    - will use ssh if GITLAB_SSH or GITHUB_SSH (as applicable) is set to true, https otherwise';
+  echo '    - if successful, will clone someRepo';
+  echo;
+  echo '  ** if neither GITLAB_PROJECT_PATH nor GITHUB_USERNAME are set, will error out';
+  echo;
+  echo '  ** if path/to/folder is specified, will rename repo to path/to/folder';
+  echo;
+  echo '  ** in any usage, will cd into repo directory after cloning';
+  echo;
+  echo;
+
+else
+  folder=
+  url=
+  success=1;
+  if [[ ! -z $2 ]]; then
+    folder=$2;
+  else
+    base=$(basename $1);
+    folder="${base%.git}";
+  fi
+  if [[ $1 =~ (git@git(hub|lab).com|https://git(hub|lab).com) ]]; then
+    url=$1;
+    git clone $url $folder && cd $folder;
+  else
+    if [[ ! ( -z $GITLAB_PROJECT_PATH && -z $GITHUB_USERNAME ) ]]; then
+      echo "Checking GitLab for repo $1...";
+      if [[ ! -z $GITLAB_PROJECT_PATH ]]; then
+        if [[ $GITLAB_SSH == true ]]; then
+          protocol='git@gitlab.com:';
+        else
+          protocol='https://gitlab.com/';
+        fi
+        url="$protocol$GITLAB_PROJECT_PATH/$1.git";
+        git clone $url $folder;
+        success=$?;
+      fi
+      if [[ $success -gt 0 ]]; then
+        echo "Unable to find repo $1 on GitLab. Checking GitHub...";
+        if [[ ! -z $GITHUB_USERNAME ]]; then
+          if [[ $GITHUB_SSH == true ]]; then
+            protocol='git@github.com:';
+          else
+            protocol='https://github.com/';
+          fi
+          url="$protocol$GITHUB_USERNAME/$1.git";
+          git clone $url $folder;
+          success=$?;
+        fi
+      fi
+      if [[ $success -gt 0 ]]; then
+        echo "ERROR:  Unable to find repo $1 on either GitLab or GitHub. Please check that everything is spelled correctly and that you have the necessary permissions.";
+        return 1;
+      else
+        cd $folder;
+      fi
+    else
+      echo 'ERROR:  At least one of GITHUB_USERNAME or GITLAB_PROJECT_PATH must be set to use pathless option.';
+    fi
+  fi
+fi

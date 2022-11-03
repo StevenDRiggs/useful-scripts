@@ -1,0 +1,12 @@
+#! /bin/bash
+
+if [[ ! -z $1 && $1 -eq '-h' ]]; then
+  echo;
+  echo 'Change into last modified directory within current directory';
+  echo;
+  echo 'SYNTAX:';
+  echo '  dl';
+  echo;
+else
+  cd $(ls -tyd */ | head -n 1);
+fi

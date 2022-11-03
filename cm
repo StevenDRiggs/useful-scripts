@@ -1,0 +1,12 @@
+#! /bin/bash
+
+if [[ "$1" == "" || "$1" == '-h' ]]; then
+  echo;
+  echo 'Create a new directory (and any necessary parent directories) and change working directory into it';
+  echo;
+  echo 'SYNTAX:';
+  echo '  cm path/to/directory/to/create[/]';
+  echo;
+else
+  mkdir -p "$1" && cd "$1";
+fi
